@@ -35,36 +35,31 @@ BS_:
 
 BU_: Rover Jetson
 
-
-
-
-BO_ 14 LinVelXy: 8 Rover
-	SG_ LinVelX : 0|32@1- (1,0) [0|0] "m/s" Vector__XXX
-	SG_ LinVelY : 32|32@1- (1,0) [0|0] "m/s" Vector__XXX
-
-BO_ 11 ImuGyroXy: 8 Rover
-	SG_ GyroX : 0|32@1- (1,0) [0|0] "rad/s" Vector__XXX
-	SG_ GyroY : 32|32@1- (1,0) [0|0] "rad/s" Vector__XXX
-
-BO_ 12 ImuAccelXy: 8 Rover
-	SG_ AccelX : 0|32@1- (1,0) [0|0] "m/s^2" Vector__XXX
-	SG_ AccelY : 32|32@1- (1,0) [0|0] "m/s^2" Vector__XXX
-
-BO_ 13 ImuZ: 8 Rover
-	SG_ GyroZ : 0|32@1- (1,0) [0|0] "rad/s" Vector__XXX
-	SG_ AccelZ : 32|32@1- (1,0) [0|0] "m/s^2" Vector__XXX
-
-BO_ 15 EncoderRpms: 8 Rover
-	SG_ FrontLeft : 0|16@1- (1,0) [-180|180] "rpm" Vector__XXX
-	SG_ RearLeft : 16|16@1- (1,0) [-180|180] "rpm" Vector__XXX
-	SG_ FrontRight : 32|16@1- (1,0) [-180|180] "rpm" Vector__XXX
-	SG_ RearRight : 48|16@1- (1,0) [-180|180] "rpm" Vector__XXX
-
 BO_ 10 Reference: 4 Jetson
 	SG_ FrontLeft : 0|8@1- (1,0) [0|0] "rpm" Vector__XXX
 	SG_ RearLeft : 8|8@1- (1,0) [0|0] "rpm" Vector__XXX
 	SG_ FrontRight : 16|8@1- (1,0) [0|0] "rpm" Vector__XXX
 	SG_ RearRight : 24|8@1- (1,0) [0|0] "rpm" Vector__XXX
+
+BO_ 11 EncoderRpms: 8 Rover
+	SG_ FrontLeft : 0|16@1- (1,0) [-180|180] "rpm" Vector__XXX
+	SG_ RearLeft : 16|16@1- (1,0) [-180|180] "rpm" Vector__XXX
+	SG_ FrontRight : 32|16@1- (1,0) [-180|180] "rpm" Vector__XXX
+	SG_ RearRight : 48|16@1- (1,0) [-180|180] "rpm" Vector__XXX
+
+CM_ BO_ 11 "Raw encoder RPMs. Physical RPM = raw_value * (1/182).";
+
+BO_ 12 ImuGyroXy: 8 Rover
+	SG_ GyroX : 0|32@1- (1,0) [0|0] "rad/s" Vector__XXX
+	SG_ GyroY : 32|32@1- (1,0) [0|0] "rad/s" Vector__XXX
+
+BO_ 13 ImuAccelXy: 8 Rover
+	SG_ AccelX : 0|32@1- (1,0) [0|0] "m/s^2" Vector__XXX
+	SG_ AccelY : 32|32@1- (1,0) [0|0] "m/s^2" Vector__XXX
+
+BO_ 14 ImuZ: 8 Rover
+	SG_ GyroZ : 0|32@1- (1,0) [0|0] "rad/s" Vector__XXX
+	SG_ AccelZ : 32|32@1- (1,0) [0|0] "m/s^2" Vector__XXX
 
 
 BA_DEF_ SG_  "SPN" INT 0 524287;
