@@ -35,11 +35,11 @@ BS_:
 
 BU_: Rover Jetson
 
-BO_ 10 Reference: 4 Jetson
-	SG_ FrontLeft : 0|8@1- (1,0) [0|0] "rpm" Vector__XXX
-	SG_ RearLeft : 8|8@1- (1,0) [0|0] "rpm" Vector__XXX
-	SG_ FrontRight : 16|8@1- (1,0) [0|0] "rpm" Vector__XXX
-	SG_ RearRight : 24|8@1- (1,0) [0|0] "rpm" Vector__XXX
+BO_ 10 Reference: 8 Jetson
+	SG_ FrontLeft : 0|16@1- (1,0) [0|0] "rpm" Vector__XXX
+	SG_ RearLeft : 16|16@1- (1,0) [0|0] "rpm" Vector__XXX
+	SG_ FrontRight : 32|16@1- (1,0) [0|0] "rpm" Vector__XXX
+	SG_ RearRight : 48|16@1- (1,0) [0|0] "rpm" Vector__XXX
 
 BO_ 11 EncoderRpms: 8 Rover
 	SG_ FrontLeft : 0|16@1- (1,0) [-180|180] "rpm" Vector__XXX
