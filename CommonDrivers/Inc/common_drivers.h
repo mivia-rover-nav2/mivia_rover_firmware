@@ -49,6 +49,20 @@ typedef uint8_t bool8u;
 float clamp_float(float x, float min, float max);
 
 /**
+ * Clamps a double value to a specified range.
+ *
+ * @param[in] x The value to clamp.
+ * @param[in] min The minimum allowable value.
+ * @param[in] max The maximum allowable value.
+ * @return The clamped value.
+ *
+ * @note This function assumes that min is less than or equal to max.
+ *       No validation is done inside the function to check this.
+ */
+double clamp_double(double x, double min, double max);
+
+
+/**
  * Maps a float value from one range to another.
  *
  * @param[in] x The value to map.

@@ -118,27 +118,27 @@ static inline Rover_StatusTypeDef __imu_init(){
 }
 
 Rover_StatusTypeDef rover_init(void){
-	rover.canMsgQueueHandle =  osMessageQueueNew (CAN_QUEUE_SIZE, sizeof(can_msg_t), &rover.canMsgQueue_attributes);
+	rover.canMsgQueueHandle = osMessageQueueNew(CAN_QUEUE_SIZE, sizeof(can_msg_t), &rover.canMsgQueue_attributes);
 	rover.can_sender.xQueue = rover.canMsgQueueHandle;
 	Rover_StatusTypeDef status = ROVER_ERROR;
-	if ((encoder_init(&rover.encoder_fl, &rover.encoder1_config)== ENCODER_OK) &&
-			(encoder_init(&rover.encoder_rl, &rover.encoder2_config) == ENCODER_OK) &&
-			(encoder_init(&rover.encoder_fr, &rover.encoder3_config) == ENCODER_OK) &&
-			(encoder_init(&rover.encoder_rr, &rover.encoder4_config) == ENCODER_OK) &&
-			(pid_init(&rover.pid_fl, PID_ANT_SX_KP_FAST, PID_ANT_SX_KI_FAST, PID_ANT_SX_KD_FAST, UK_MIN, UK_MAX) == PID_OK) &&
-			(pid_init(&rover.pid_rl, PID_POS_SX_KP_FAST, PID_POS_SX_KI_FAST, PID_POS_SX_KD_FAST, UK_MIN, UK_MAX) == PID_OK) &&
-			(pid_init(&rover.pid_fr, PID_ANT_DX_KP_FAST, PID_ANT_DX_KI_FAST, PID_ANT_DX_KD_FAST, UK_MIN, UK_MAX) == PID_OK) &&
-			(pid_init(&rover.pid_rr, PID_POS_DX_KP_FAST, PID_POS_DX_KI_FAST, PID_POS_DX_KD_FAST, UK_MIN, UK_MAX) == PID_OK) &&
-			(__imu_init() == ROVER_OK) &&
-			(Start_PWM_Channels()== HAL_OK) &&
-			(stop_all_motors() == MOTOR_OK) &&
-			(canManager_Init(&rover.can_manager) == CAN_MANAGER_OK) &&
-			(canManager_AddAllowedId(&rover.can_manager, RPM_REFERENCE_MSG_ID) == CAN_MANAGER_OK) &&
-			(canManager_AddAllowedId(&rover.can_manager, LIN_VEL_XY_FEEDBACK_MSG_ID) == CAN_MANAGER_OK) &&
-			(canManager_AddAllowedId(&rover.can_manager, IMU_GYRO_XY_FEEDBACK_MSG_ID) == CAN_MANAGER_OK) &&
-			(canManager_AddAllowedId(&rover.can_manager, IMU_ACCEL_XY_FEEDBACK_MSG_ID) == CAN_MANAGER_OK) &&
-			(canManager_AddAllowedId(&rover.can_manager, IMU_Z_FEEDBACK_MSG_ID) == CAN_MANAGER_OK) &&
-			(can_sender_init(&rover.can_sender, &rover.can_manager, rover.canMsgQueueHandle) == CAN_SENDER_OK))
+	if ((encoder_init(&rover.encoder_fl, &rover.encoder1_config) == ENCODER_OK) &&
+		(encoder_init(&rover.encoder_rl, &rover.encoder2_config) == ENCODER_OK) &&
+		(encoder_init(&rover.encoder_fr, &rover.encoder3_config) == ENCODER_OK) &&
+		(encoder_init(&rover.encoder_rr, &rover.encoder4_config) == ENCODER_OK) &&
+		(pid_init(&rover.pid_fl, PID_ANT_SX_KP_FAST, PID_ANT_SX_KI_FAST, PID_ANT_SX_KD_FAST, UK_MIN, UK_MAX) == PID_OK) &&
+		(pid_init(&rover.pid_rl, PID_POS_SX_KP_FAST, PID_POS_SX_KI_FAST, PID_POS_SX_KD_FAST, UK_MIN, UK_MAX) == PID_OK) &&
+		(pid_init(&rover.pid_fr, PID_ANT_DX_KP_FAST, PID_ANT_DX_KI_FAST, PID_ANT_DX_KD_FAST, UK_MIN, UK_MAX) == PID_OK) &&
+		(pid_init(&rover.pid_rr, PID_POS_DX_KP_FAST, PID_POS_DX_KI_FAST, PID_POS_DX_KD_FAST, UK_MIN, UK_MAX) == PID_OK) &&
+		(__imu_init() == ROVER_OK) &&
+		(Start_PWM_Channels() == HAL_OK) &&
+		(stop_all_motors() == MOTOR_OK) &&
+		(canManager_Init(&rover.can_manager) == CAN_MANAGER_OK) &&
+		(canManager_AddAllowedId(&rover.can_manager, CAN_MESSAGES_REFERENCE_MSG_ID) == CAN_MANAGER_OK) &&
+		(canManager_AddAllowedId(&rover.can_manager, CAN_MESSAGES_ENCODER_RPMS_MSG_ID) == CAN_MANAGER_OK) &&
+		(canManager_AddAllowedId(&rover.can_manager, CAN_MESSAGES_IMU_GYRO_XY_MSG_ID) == CAN_MANAGER_OK) &&
+		(canManager_AddAllowedId(&rover.can_manager, CAN_MESSAGES_IMU_ACCEL_XY_MSG_ID) == CAN_MANAGER_OK) &&
+		(canManager_AddAllowedId(&rover.can_manager, CAN_MESSAGES_IMU_Z_MSG_ID) == CAN_MANAGER_OK) &&
+		(can_sender_init(&rover.can_sender, &rover.can_manager, rover.canMsgQueueHandle) == CAN_SENDER_OK))
 	{
 		HAL_GPIO_WritePin(GPIOB, RELE_Pin|GPIO_PIN_13, GPIO_PIN_SET);
 		status = ROVER_OK;
@@ -228,44 +228,24 @@ int16_t saturate_rpm(int16_t value)
     return value;
 }
 
-Rover_StatusTypeDef rover_get_linear_velocity_xy(double Ts){
-	Rover_StatusTypeDef status = ROVER_ERROR;
-	static double theta = 0.0;
-	if(Ts >= 0.0){
-		double rpm_fl = rover.encoder_fl.actual_speed_rpm;
-		double rpm_rl = rover.encoder_rl.actual_speed_rpm;
-		double rpm_fr = rover.encoder_fr.actual_speed_rpm;
-		double rpm_rr = rover.encoder_rr.actual_speed_rpm;
-		double vel_left  = ((rpm_fl + rpm_rl) / 2.0) * WHEEL_RADIUS_M * RPM_TO_RAD_PER_SEC;
-		double vel_right =  ((rpm_fr + rpm_rr) / 2.0) * WHEEL_RADIUS_M * RPM_TO_RAD_PER_SEC;
-		double v = (vel_right + vel_left) / 2.0;
-		double omega = rover.mpu.gyro.z;
-		theta += omega * Ts;
-		rover.vx = (float)(v * cos(theta));
-		rover.vy = (float)(v * sin(theta));
-
-		status = ROVER_OK;
-	}
-
-	return status;
-}
 
 Rover_StatusTypeDef rover_enc_can_tx_step(void){
 	Rover_StatusTypeDef status = ROVER_ERROR;
-	LinVelFeedback_t vel_data;
-	LinVelFeedback_init(&vel_data);
-	uint8_t can_frame[LIN_VEL_FRAME_LENGTH_IN_BYTE];
 	can_msg_t message;
+	can_messages_encoder_rpms_t enc_msg;
 	if (motor_control_step() == MOTOR_OK) {
 		#ifdef USE_CAN_TX
-		if (rover_get_linear_velocity_xy(ENCODER_SAMPLING_TIME) == ROVER_OK) {
-			setLinVel(&vel_data, rover.vx, rover.vy);
-			if (LinVelFeedback_createXYFrame(&vel_data, can_frame) == LIN_VEL_FEEDBACK_OK) {
-				memcpy(message.msg, can_frame, LIN_VEL_FRAME_LENGTH_IN_BYTE);
-				message.id = LIN_VEL_XY_FEEDBACK_MSG_ID;
-				if(can_sender_enqueue_msg(&rover.can_sender, &message) == CAN_SENDER_OK){
-					status = ROVER_OK;
-				}
+		if ((can_msg_encoder_rpms_init(&enc_msg) == CAN_MESSAGES_OK) &&
+			(can_msg_encoder_rpms_set_phys(&enc_msg,
+			                               rover.encoder_fl.actual_speed_rpm,
+			                               rover.encoder_rl.actual_speed_rpm,
+			                               rover.encoder_fr.actual_speed_rpm,
+			                               rover.encoder_rr.actual_speed_rpm) == CAN_MESSAGES_OK) &&
+			(can_msg_pack_encoder_rpms_frame(&enc_msg, message.msg) == CAN_MESSAGES_OK))
+		{
+			message.id = CAN_MESSAGES_ENCODER_RPMS_MSG_ID;
+			if (can_sender_enqueue_msg(&rover.can_sender, &message) == CAN_SENDER_OK){
+				status = ROVER_OK;
 			}
 		}
 		#else

@@ -23,6 +23,27 @@ float clamp_float(float x, float min, float max) {
 	return ret_val;
 }
 
+double clamp_double(double x, double min, double max)
+{
+    double ret_val;
+
+    if (x < min)
+    {
+        ret_val = min;
+    }
+    else if (x > max)
+    {
+        ret_val = max;
+    }
+    else
+    {
+        ret_val = x;
+    }
+
+    return ret_val;
+}
+
+
 float map_value_float(float x, float in_min, float in_max, float out_min,
 		float out_max) {
 	float ret_val;

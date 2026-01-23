@@ -104,29 +104,24 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 
 	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_SET);
 
-    rover_t* const rover = rover_get_instance();
+	rover_t* const rover = rover_get_instance();
 
-    HAL_CAN_GetRxMessage(hcan, rover->can_config.rx_fifo, &rover->can_manager.config->rx_header, rover->can_manager.rx_data);
+	HAL_CAN_GetRxMessage(hcan, rover->can_config.rx_fifo, &rover->can_manager.config->rx_header, rover->can_manager.rx_data);
 
-    if (rover->can_manager.config->rx_header.StdId == RPM_REFERENCE_MSG_ID && rover->can_manager.config->rx_header.DLC == RPM_REFERENCE_FRAME_LENGTH) {
-    	uint8_t* data = rover->can_manager.rx_data;
-    	int16_t fl_rpm, rl_rpm, fr_rpm, rr_rpm;
+	if (rover->can_manager.config->rx_header.StdId == CAN_MESSAGES_REFERENCE_MSG_ID && rover->can_manager.config->rx_header.DLC == CAN_MESSAGES_REFERENCE_DLC_BYTES) {
+		can_messages_reference_t ref;
+		if (can_msg_unpack_reference_frame(rover->can_manager.rx_data, &ref) == CAN_MESSAGES_OK) {
 
-        if (CanParser_decode_can_frame(data, &fl_rpm ,  0, 16, 1, sizeof(int16_t)) == CAN_PARSER_STATUS_OK &&
-            CanParser_decode_can_frame(data, &rl_rpm, 16, 16, 1, sizeof(int16_t)) == CAN_PARSER_STATUS_OK &&
-            CanParser_decode_can_frame(data, &fr_rpm , 32, 16, 1, sizeof(int16_t)) == CAN_PARSER_STATUS_OK &&
-            CanParser_decode_can_frame(data, &rr_rpm, 48, 16, 1, sizeof(int16_t)) == CAN_PARSER_STATUS_OK) {
+			rover->reference_fl_rpm = saturate_rpm(ref.front_left_rpm);
+			rover->reference_rl_rpm = saturate_rpm(ref.rear_left_rpm);
+			rover->reference_fr_rpm = saturate_rpm(ref.front_right_rpm);
+			rover->reference_rr_rpm = saturate_rpm(ref.rear_right_rpm);
 
-        	rover->reference_fl_rpm = saturate_rpm(fl_rpm);
-        	rover->reference_rl_rpm = saturate_rpm(rl_rpm);
-        	rover->reference_fr_rpm = saturate_rpm(fr_rpm);
-        	rover->reference_rr_rpm = saturate_rpm(rr_rpm);
+			rover->can_manager.message_received = CAN_MANAGER_RECEIVED_NEW_MESSAGE;
+		}
+	}
 
-            rover->can_manager.message_received = CAN_MANAGER_RECEIVED_NEW_MESSAGE;
-        }
-    }
-
-    HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_RESET);
 }
 
 /* USER CODE END FunctionPrototypes */
