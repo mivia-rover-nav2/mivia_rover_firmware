@@ -310,21 +310,6 @@ void rover_pid_control(void);
  */
 int16_t saturate_rpm(int16_t value);
 
-/**
- * @brief Computes the rover's linear velocity components (vx, vy) in global coordinates.
- *
- * This function:
- * - Reads RPM values from all four wheel encoders.
- * - Converts them to linear velocities using the wheel radius.
- * - Computes average translational velocity and angular velocity (omega).
- * - Integrates orientation (theta) over time.
- * - Projects the velocity onto the global frame using cosine and sine of theta.
- *
- * @param Ts Sampling period in seconds (must be non-negative).
- * @return ROVER_OK if computation is successful, otherwise ROVER_ERROR.
- *
- */
-Rover_StatusTypeDef rover_get_linear_velocity_xy(double Ts);
 
 /**
  * @brief Sends encoder-based velocity data over CAN bus.
