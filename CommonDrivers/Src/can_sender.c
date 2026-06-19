@@ -38,7 +38,7 @@ CANSender_StatusTypeDef can_sender_dequeue_msg(can_sender_t *can_sender) {
                 can_msg_t *can_msg_buff = &can_sender->can_msg_buff;
                 if (xQueuePeek(can_sender->xQueue, can_msg_buff, 0U) == pdPASS) {
                     if ((canManager_SendMessage(can_sender->can_manager, can_msg_buff->id, can_msg_buff->msg) == CAN_MANAGER_OK) &&
-                    	(xQueueReceive(can_sender->xQueue, can_msg_buff, 0U) == pdPASS)){
+                    	(xQueueReceive(can_sender->xQueue, can_msg_buff, 0U) == pdPASS)){ //TODO: qui c'è un bug: perché la canManager_SendMessage per come è implementata può dare OK anche se non è riuscita a inviare il messaggio (perché non c'erano mailboxes libere), causando l'eliminazione del messaggio dalla coda anche se non è stato inviato. Per risolvere questo problema, si potrebbe modificare la funzione canManager_SendMessage in modo che restituisca un codice di errore specifico quando non ci sono mailboxes libere, e in quel caso non rimuovere il messaggio dalla coda.
                             status = CAN_SENDER_OK;
                     }
                 }
