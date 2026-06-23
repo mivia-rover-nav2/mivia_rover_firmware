@@ -24,12 +24,24 @@
 /* ============================ */
 
 /**
- * @brief Enable IMU data acquisition and related CAN transmission.
+ * @brief Enable IMU (MPU60X0) sensor acquisition.
  *
- * Define this macro to enable the update and transmission of IMU data (MPU60X0).
- * If undefined, IMU readings and their related CAN operations will be skipped.
+ * Define this macro to enable the initialization and the reading of the MPU60X0
+ * sensor. If undefined, the sensor is neither initialized nor read, and the IMU
+ * data area (rover.mpu.gyro / rover.mpu.accel) keeps its current values.
  */
-//#define USE_MPU
+//#define USE_MPU_SENSOR
+
+/**
+ * @brief Enable CAN transmission of IMU data.
+ *
+ * Define this macro to enable the transmission of the IMU data (gyro XY, accel XY
+ * and Z frames) over the CAN bus. This flag is independent from USE_MPU_SENSOR:
+ * if the transmission is enabled but the sensor is disabled, the values currently
+ * stored in rover.mpu.gyro / rover.mpu.accel are transmitted as-is. This allows
+ * testing the full CAN communication without a physical MPU6050.
+ */
+//#define ENABLE_MPU_CAN_TX
 
 
 #define USE_CAN_TX
@@ -322,10 +334,30 @@ int16_t saturate_rpm(int16_t value);
 Rover_StatusTypeDef rover_enc_can_tx_step(void);
 
 /**
+ * @brief Reads the IMU sensor and refreshes the IMU data area.
+ *
+ * Enabled by USE_MPU_SENSOR. Reads the current gyroscope and accelerometer values
+ * from the MPU60X0 and stores them into rover.mpu.gyro / rover.mpu.accel, making them
+ * available to any consumer (e.g. rover_imu_can_tx_step) independently of the CAN
+ * transmission.
+ *
+ * If USE_MPU_SENSOR is undefined the function is a no-op and returns ROVER_OK.
+ *
+ * @return ROVER_OK if the sensor was read successfully, otherwise ROVER_ERROR.
+ */
+Rover_StatusTypeDef rover_imu_read_step(void);
+
+/**
  * @brief Sends IMU sensor data over CAN bus.
  *
- * Reads current gyroscope and accelerometer values, formats them into three separate
- * CAN frames (gyro XY, accel XY, and Z data), and queues them for transmission.
+ * Enabled by ENABLE_MPU_CAN_TX. Formats the values currently stored in
+ * rover.mpu.gyro / rover.mpu.accel into three separate CAN frames (gyro XY, accel XY,
+ * and Z data) and queues them for transmission. This step does not read the sensor:
+ * refreshing the data area is the responsibility of rover_imu_read_step(). If the
+ * sensor is disabled, the last stored values are transmitted as-is, which allows
+ * testing the full CAN communication without a physical MPU6050.
+ *
+ * If ENABLE_MPU_CAN_TX is undefined the function is a no-op and returns ROVER_OK.
  *
  * @return ROVER_OK if all messages are successfully queued, otherwise ROVER_ERROR.
  */

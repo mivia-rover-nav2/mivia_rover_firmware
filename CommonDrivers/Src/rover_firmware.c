@@ -7,7 +7,7 @@
 #include "cmsis_os.h"
 #include "encoder.h"
 #include "rover_firmware.h"
-#include "test_comunication.h"
+#include "can_messages.h"
 #include "can_sender.h"
 #include "i2c.h"
 #include <stdio.h>
@@ -108,12 +108,12 @@ rover_t* const rover_get_instance() {
 
 static inline Rover_StatusTypeDef __imu_init(){
 	Rover_StatusTypeDef status = ROVER_OK;
-	#ifdef USE_MPU
+	#ifdef USE_MPU_SENSOR
 	status = ROVER_ERROR;
 	if(MPU60X0_init(&rover.mpu, &rover.mpu_config, HAL_MAX_DELAY) == MPU60X0_OK){
 		status = ROVER_OK;
 	}
-	#endif // USE_MPU
+	#endif // USE_MPU_SENSOR
 	return status;
 }
 
@@ -255,31 +255,39 @@ Rover_StatusTypeDef rover_enc_can_tx_step(void){
 	return status;
 }
 
-Rover_StatusTypeDef rover_imu_can_tx_step(void){
+Rover_StatusTypeDef rover_imu_read_step(void){
 	Rover_StatusTypeDef status = ROVER_OK;
-	#ifdef USE_MPU
+	#ifdef USE_MPU_SENSOR
 	status = ROVER_ERROR;
-	can_msg_t gyro_msg, accel_msg, z_msg;
-	uint8_t gyro_frame[IMU_FRAME_LENGTH_IN_BYTE];
-	uint8_t accel_frame[IMU_FRAME_LENGTH_IN_BYTE];
-	uint8_t z_frame[IMU_FRAME_LENGTH_IN_BYTE];
-
-
+	/* Refresh the IMU data area (rover.mpu.gyro/accel) from the sensor. */
 	if (
 	    MPU60X0_get_gyro_value(&rover.mpu, &rover.mpu.gyro) == MPU60X0_OK &&
-	    MPU60X0_get_accel_value(&rover.mpu, &rover.mpu.accel) == MPU60X0_OK &&
-	    IMUFeedback_createGyroXYFrame(&rover.mpu.gyro, gyro_frame) == IMU_FEEDBACK_OK &&
-	    IMUFeedback_createAccelXYFrame(&rover.mpu.accel, accel_frame) == IMU_FEEDBACK_OK &&
-	    IMUFeedback_createZFrame(&rover.mpu.gyro, &rover.mpu.accel, z_frame) == IMU_FEEDBACK_OK
+	    MPU60X0_get_accel_value(&rover.mpu, &rover.mpu.accel) == MPU60X0_OK
 	) {
-	    memcpy(gyro_msg.msg, gyro_frame, IMU_FRAME_LENGTH_IN_BYTE);
-	    gyro_msg.id = IMU_GYRO_XY_FEEDBACK_MSG_ID;
+	    status = ROVER_OK;
+	}
+	#endif // USE_MPU_SENSOR
+	return status;
+}
 
-	    memcpy(accel_msg.msg, accel_frame, IMU_FRAME_LENGTH_IN_BYTE);
-	    accel_msg.id = IMU_ACCEL_XY_FEEDBACK_MSG_ID;
+Rover_StatusTypeDef rover_imu_can_tx_step(void){
+	Rover_StatusTypeDef status = ROVER_OK;
+	#ifdef ENABLE_MPU_CAN_TX
+	status = ROVER_ERROR;
+	can_msg_t gyro_msg, accel_msg, z_msg;
 
-	    memcpy(z_msg.msg, z_frame, IMU_FRAME_LENGTH_IN_BYTE);
-	    z_msg.id = IMU_Z_FEEDBACK_MSG_ID;
+	/* Transmit whatever is currently stored in rover.mpu.gyro/accel. When
+	 * USE_MPU_SENSOR is enabled this area is refreshed by rover_imu_read_step();
+	 * otherwise the last stored values are sent as-is. The payloads are packed
+	 * per the DBC layout (BO_12 ImuGyroXy, BO_13 ImuAccelXy, BO_14 ImuZ). */
+	if (
+	    can_msg_imu_pack_gyro_xy_frame(&rover.mpu.gyro, gyro_msg.msg) == CAN_MESSAGES_OK &&
+	    can_msg_imu_pack_accel_xy_frame(&rover.mpu.accel, accel_msg.msg) == CAN_MESSAGES_OK &&
+	    can_msg_imu_pack_z_frame(&rover.mpu.gyro, &rover.mpu.accel, z_msg.msg) == CAN_MESSAGES_OK
+	) {
+	    gyro_msg.id = CAN_MESSAGES_IMU_GYRO_XY_MSG_ID;
+	    accel_msg.id = CAN_MESSAGES_IMU_ACCEL_XY_MSG_ID;
+	    z_msg.id = CAN_MESSAGES_IMU_Z_MSG_ID;
 
 	    if (
 	        can_sender_enqueue_msg(&rover.can_sender, &gyro_msg) == CAN_SENDER_OK &&
@@ -289,7 +297,7 @@ Rover_StatusTypeDef rover_imu_can_tx_step(void){
 	        status = ROVER_OK;
 	    }
 	}
-	#endif // USE_MPU
+	#endif // ENABLE_MPU_CAN_TX
 	return status;
 }
 

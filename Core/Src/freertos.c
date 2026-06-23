@@ -30,7 +30,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "rover_firmware.h"
-#include "test_comunication.h"
+#include "can_messages.h"
 #include "canParser.h"
 /* USER CODE END Includes */
 
@@ -270,6 +270,9 @@ void MPUCanTxFunc(void *argument)
 	for (;;){
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
+		if (rover_imu_read_step() != ROVER_OK) {
+			Error_Handler();
+		}
 		if (rover_imu_can_tx_step()!= ROVER_OK) {
 			Error_Handler();
 		}

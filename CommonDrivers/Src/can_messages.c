@@ -9,7 +9,7 @@
  * Authors: Alessio Guarini, Miriam Vitolo
  */
 
-#include "test_comunication.h"
+#include "can_messages.h"
 #include "canParser.h"
 #include "common_drivers.h"
 
