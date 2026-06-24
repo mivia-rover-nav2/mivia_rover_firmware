@@ -144,12 +144,12 @@ typedef StaticQueue_t osStaticMessageQDef_t;
 /**
  * @brief Period of CAN message transmission in milliseconds.
  */
-#define CAN_TX_PERIOD_MS                          	(5U)
+#define CAN_TX_PERIOD_MS                          	(4U)
 
 /**
- * @brief Period of MPU CAN message transmission in milliseconds.
+ * @brief Period of IMU task in milliseconds.
  */
-#define MPU_CAN_TX_PERIOD_MS                          	(7U)
+#define IMU_TASK_PERIOD_MS                          	(7U)
 /**
  * @brief Size of the CAN message queue.
  */

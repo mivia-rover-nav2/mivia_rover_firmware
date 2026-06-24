@@ -54,25 +54,6 @@ typedef StaticTask_t osStaticThreadDef_t;
 /* USER CODE BEGIN Variables */
 
 /* USER CODE END Variables */
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for MotorControlTas */
-osThreadId_t MotorControlTasHandle;
-uint32_t encoderReadBuffer[ 128 ];
-osStaticThreadDef_t encoderReadControlBlock;
-const osThreadAttr_t MotorControlTas_attributes = {
-  .name = "MotorControlTas",
-  .cb_mem = &encoderReadControlBlock,
-  .cb_size = sizeof(encoderReadControlBlock),
-  .stack_mem = &encoderReadBuffer[0],
-  .stack_size = sizeof(encoderReadBuffer),
-  .priority = (osPriority_t) osPriorityRealtime6,
-};
 /* Definitions for canTxTask */
 osThreadId_t canTxTaskHandle;
 uint32_t canTxTaskBuffer[ 256 ];
@@ -85,17 +66,29 @@ const osThreadAttr_t canTxTask_attributes = {
   .stack_size = sizeof(canTxTaskBuffer),
   .priority = (osPriority_t) osPriorityRealtime7,
 };
-/* Definitions for MPUCanTxTask */
-osThreadId_t MPUCanTxTaskHandle;
-uint32_t MPUCanTxTaskBuffer[ 128 ];
-osStaticThreadDef_t MPUCanTxTaskControlBlock;
-const osThreadAttr_t MPUCanTxTask_attributes = {
-  .name = "MPUCanTxTask",
-  .cb_mem = &MPUCanTxTaskControlBlock,
-  .cb_size = sizeof(MPUCanTxTaskControlBlock),
-  .stack_mem = &MPUCanTxTaskBuffer[0],
-  .stack_size = sizeof(MPUCanTxTaskBuffer),
-  .priority = (osPriority_t) osPriorityLow,
+/* Definitions for motorsTask */
+osThreadId_t motorsTaskHandle;
+uint32_t motorsTaskBuffer[ 256 ];
+osStaticThreadDef_t motorsTaskControlBlock;
+const osThreadAttr_t motorsTask_attributes = {
+  .name = "motorsTask",
+  .cb_mem = &motorsTaskControlBlock,
+  .cb_size = sizeof(motorsTaskControlBlock),
+  .stack_mem = &motorsTaskBuffer[0],
+  .stack_size = sizeof(motorsTaskBuffer),
+  .priority = (osPriority_t) osPriorityRealtime6,
+};
+/* Definitions for imuTask */
+osThreadId_t imuTaskHandle;
+uint32_t imuTaskBuffer[ 256 ];
+osStaticThreadDef_t imuTaskControlBlock;
+const osThreadAttr_t imuTask_attributes = {
+  .name = "imuTask",
+  .cb_mem = &imuTaskControlBlock,
+  .cb_size = sizeof(imuTaskControlBlock),
+  .stack_mem = &imuTaskBuffer[0],
+  .stack_size = sizeof(imuTaskBuffer),
+  .priority = (osPriority_t) osPriorityRealtime5,
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -126,10 +119,9 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 
 /* USER CODE END FunctionPrototypes */
 
-void StartDefaultTask(void *argument);
-void startMotorControl(void *argument);
-void StartCanTxTask(void *argument);
-void MPUCanTxFunc(void *argument);
+void canTxTaskStep(void *argument);
+void motorsTaskStep(void *argument);
+void imuTaskStep(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -162,17 +154,14 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
-
-  /* creation of MotorControlTas */
-  MotorControlTasHandle = osThreadNew(startMotorControl, NULL, &MotorControlTas_attributes);
-
   /* creation of canTxTask */
-  canTxTaskHandle = osThreadNew(StartCanTxTask, NULL, &canTxTask_attributes);
+  canTxTaskHandle = osThreadNew(canTxTaskStep, NULL, &canTxTask_attributes);
 
-  /* creation of MPUCanTxTask */
-  MPUCanTxTaskHandle = osThreadNew(MPUCanTxFunc, NULL, &MPUCanTxTask_attributes);
+  /* creation of motorsTask */
+  motorsTaskHandle = osThreadNew(motorsTaskStep, NULL, &motorsTask_attributes);
+
+  /* creation of imuTask */
+  imuTaskHandle = osThreadNew(imuTaskStep, NULL, &imuTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -184,35 +173,40 @@ void MX_FREERTOS_Init(void) {
 
 }
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* USER CODE BEGIN Header_canTxTaskStep */
 /**
-  * @brief  Function implementing the defaultTask thread.
+  * @brief  Function implementing the canTxTask thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
+/* USER CODE END Header_canTxTaskStep */
+void canTxTaskStep(void *argument)
 {
-  /* USER CODE BEGIN StartDefaultTask */
-  /* Infinite loop */
-  for(;;)
-  {
-
-    osDelay(1);
-  }
-  /* USER CODE END StartDefaultTask */
+  /* USER CODE BEGIN canTxTaskStep */
+	TickType_t xLastWakeTime;
+	const TickType_t xFrequency = pdMS_TO_TICKS(CAN_TX_PERIOD_MS);
+	xLastWakeTime = xTaskGetTickCount();
+	for (;;) {
+		vTaskDelayUntil(&xLastWakeTime, xFrequency);
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_SET);
+		if (rover_can_tx_step() != ROVER_OK) {
+			Error_Handler();
+		}
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_RESET);
+	}
+  /* USER CODE END canTxTaskStep */
 }
 
-/* USER CODE BEGIN Header_startMotorControl */
+/* USER CODE BEGIN Header_motorsTaskStep */
 /**
-* @brief Function implementing the MotorControlTas thread.
+* @brief Function implementing the motorsTask thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_startMotorControl */
-void startMotorControl(void *argument)
+/* USER CODE END Header_motorsTaskStep */
+void motorsTaskStep(void *argument)
 {
-  /* USER CODE BEGIN startMotorControl */
+  /* USER CODE BEGIN motorsTaskStep */
 	TickType_t xLastWakeTime;
 	const TickType_t xFrequency = pdMS_TO_TICKS(ENCODER_SAMPLING_TIME * 1000);
 	xLastWakeTime = xTaskGetTickCount();
@@ -227,45 +221,21 @@ void startMotorControl(void *argument)
 
 		//HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_RESET);
 	}
-  /* USER CODE END startMotorControl */
+  /* USER CODE END motorsTaskStep */
 }
 
-/* USER CODE BEGIN Header_StartCanTxTask */
+/* USER CODE BEGIN Header_imuTaskStep */
 /**
-* @brief Function implementing the canTxTask thread.
+* @brief Function implementing the imuTask thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartCanTxTask */
-void StartCanTxTask(void *argument)
+/* USER CODE END Header_imuTaskStep */
+void imuTaskStep(void *argument)
 {
-  /* USER CODE BEGIN StartCanTxTask */
+  /* USER CODE BEGIN imuTaskStep */
 	TickType_t xLastWakeTime;
-	const TickType_t xFrequency = pdMS_TO_TICKS(CAN_TX_PERIOD_MS);
-	xLastWakeTime = xTaskGetTickCount();
-	for (;;) {
-		vTaskDelayUntil(&xLastWakeTime, xFrequency);
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_SET);
-		if (rover_can_tx_step() != ROVER_OK) {
-			Error_Handler();
-		}
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_RESET);
-	}
-  /* USER CODE END StartCanTxTask */
-}
-
-/* USER CODE BEGIN Header_MPUCanTxFunc */
-/**
-* @brief Function implementing the MPUCanTxTask thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_MPUCanTxFunc */
-void MPUCanTxFunc(void *argument)
-{
-  /* USER CODE BEGIN MPUCanTxFunc */
-	TickType_t xLastWakeTime;
-	const TickType_t xFrequency = pdMS_TO_TICKS(MPU_CAN_TX_PERIOD_MS );
+	const TickType_t xFrequency = pdMS_TO_TICKS(IMU_TASK_PERIOD_MS);
 	xLastWakeTime = xTaskGetTickCount();
 	for (;;){
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
@@ -278,7 +248,7 @@ void MPUCanTxFunc(void *argument)
 		}
 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
 	}
-  /* USER CODE END MPUCanTxFunc */
+  /* USER CODE END imuTaskStep */
 }
 
 /* Private application code --------------------------------------------------*/
